@@ -21,11 +21,7 @@ You can configure some params directly in the playbook [site.yaml](site.yaml):
 * service_account_email: Google service account email, e.g. "74586816724-compute@developer.gserviceaccount.com" -> https://console.cloud.google.com/iam-admin/serviceaccounts/project
 * credentials_file: path to the google cloud credentials file, e.g. "{{ playbook_dir }}/credentials.json" -> https://console.cloud.google.com/iam-admin/serviceaccounts/project create key, use json and download the file
 * zone: Zone where to start the instance, e.g. "us-central1-b"
-* openvpn_config_file_path: Path where to copy the openvpn config file for later use, e.g. "/Users/mjoeh/vpn/myopen.ovpn"
-
-#### Google credentials
-You also need to provide a credentials_file.json in the root path of this project which you can
-download from your google account and you need to set your gcloud profile id + service_account_email.
+* openvpn_config_file_path: Path where to copy the openvpn config file for later use, e.g. "/Users/mjoe
 
 ### Run
 Just run ansible via the wrapper which will also install the needed python libs in an virtual environment.
