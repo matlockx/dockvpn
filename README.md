@@ -13,7 +13,7 @@ ansible which
 
 ### Configuration
 
-You can configure some params directly in the playbook [site.yaml]:
+You can configure some params directly in the playbook [site.yaml](site.yaml):
 
 * project_id: Google cloud profile id
 * machine_type: Type of the instance (n1-standard-1)
