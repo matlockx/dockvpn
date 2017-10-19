@@ -2,42 +2,65 @@
   connection: local
   gather_facts: false
   vars:
-    project_id: matlockx-162017
+    instance_name: openvpn
     machine_type: n1-standard-1
     image: centos-7
-    service_account_email: "74586816724-compute@developer.gserviceaccount.com"
-    credentials_file: "{{ playbook_dir }}/credentials.json"
     zone: "us-central1-b"
-    openvpn_config_file_path: "/Users/mjoeh/vpn/myopen.ovpn"
+    credentials_file: "{{ playbook_dir }}/credentials.json"
+    mail_server: smtp.gmail.com
+    mail_port: 465
+
+  pre_tasks:
+    - name: Load vars from secrets file if it exists
+      include_vars: "{{ item }}"
+      tags: [mail]
+      with_first_found:
+        - secrets.yaml
+        - secrets_example.yaml
+    - name: Precondition check
+      fail: msg="Pass the parameter '{{ item }}'"
+      when: hostvars[inventory_hostname].get(item, "") | trim == ""
+      with_items:
+        - project_id
+        - service_account_email
+        - gcloud_credentials_json
+
+    - name: Create local gcloud credentials file
+      copy: content="{{ gcloud_credentials_json }}" dest="{{ credentials_file }}" force=true
+
   tasks:
-    - name: Set credentials_file var globally
+    - name: Set facts globally
       set_fact:
-        credentials_file: "{{ credentials_file }}"
-
-    - name: Set project id var globally
-      set_fact:
-        project_id: "{{ project_id }}"
-
-    - name: Set openvpn_config_file_path var globally
-      set_fact:
-        openvpn_config_file_path: "{{ openvpn_config_file_path }}"
-
-    - name: Set service_account_email var globally
-      set_fact:
-        service_account_email: "{{ service_account_email }}"
-    - name: Start machine
-      gce:
-         instance_names: openvpn
-         machine_type: "{{ machine_type }}"
-         image: "{{ image }}"
-         service_account_email: "{{ service_account_email }}"
-         credentials_file: "{{ credentials_file }}"
-         project_id: "{{ project_id }}"
-         zone: "{{ zone }}"
-         tags:
-           - openvpn
-      tags: vpn-server
-      register: gce
+        "{{ item.name }}": "{{ item.value }}"
+      tags: [mail]
+      with_items:
+        - name: mail_server
+          value: "{{ mail_server }}"
+        - name: mail_port
+          value: "{{ mail_port }}"
+        - name: mail_user
+          value: "{{ mail_user }}"
+        - name: mail_password
+          value: "{{ mail_password }}"
+        - name: mail_address
+          value: "{{ mail_address }}"
+        - name: project_id
+          value: "{{ project_id }}"
+        - name: openvpn_config_file_path
+          value: "{{ openvpn_config_file_path }}"
+        - name: service_account_email
+          value: "{{ service_account_email }}"
+        - name: credentials_file
+          value: "{{ credentials_file }}"
+    - include: gce.yaml state=terminated
+      static: yes
+      when: new_machine | default(false) | bool
+    # unfortuntely state started does not return instance_data so we must run it with state present again
+    - include: gce.yaml state=started
+      static: yes
+      when: new_machine | default(false) | bool
+    - include: gce.yaml state=present
+      static: yes
 
     - name: Add host to group
       add_host: hostname={{ item.public_ip }} groupname=new_instances
@@ -62,7 +85,7 @@
         host: "{{ item.public_ip }}"
         port: 22
         state: started
-        timeout: 30
+        timeout: 60
       with_items: "{{ gce.instance_data }}"
 
 
@@ -132,7 +155,7 @@
       command: docker rm -fv serveconfig
 
 
-- name: Remove the config listener port from firewall rule and copy config file
+- name: Clean up and copy and send config file
   hosts: localhost
   connection: local
   tasks:
@@ -140,6 +163,20 @@
       copy:
         src: "{{ playbook_dir}}/myopen.ovpn"
         dest: "{{ openvpn_config_file_path }}"
+      when: openvpn_config_file_path and not openvpn_config_file_path | trim == ""
+
+    - name: Sending email
+      mail:
+        host: "{{ mail_server }}"
+        port: "{{ mail_port }}"
+        secure: always
+        username: "{{ mail_user }}"
+        password: "{{ mail_password }}"
+        from: "{{ mail_address }}"
+        to: "{{ mail_address }}"
+        subject: openvpn
+        attach: "{{ playbook_dir}}/myopen.ovpn"
+      tags: mail
 
     - name: Update firewal rule
       gce_net:
@@ -152,3 +189,6 @@
         project_id: "{{ project_id }}"
         target_tags:
           - openvpn
+
+    - name: Remove gcloud credentials locally
+      file: name="{{ credentials_file }}" state=absent
