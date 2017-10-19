@@ -15,11 +15,11 @@ ansible which
 
 You can configure some params directly in the playbook [site.yaml](site.yaml):
 
-* project_id: Google cloud profile id
-* machine_type: Type of the instance (n1-standard-1)
-* image: Image id, e.g. centos-7
-* service_account_email: Google service account email, e.g. "74586816724-compute@developer.gserviceaccount.com"
-* credentials_file: path to the google cloud credentials file, e.g. "{{ playbook_dir }}/credentials.json"
+* project_id: Google cloud profile id -> https://console.cloud.google.com/iam-admin/settings/project
+* machine_type: Type of the instance (n1-standard-1) -> https://cloud.google.com/compute/docs/machine-types
+* image: Image id, e.g. centos-7 -> https://cloud.google.com/compute/docs/images
+* service_account_email: Google service account email, e.g. "74586816724-compute@developer.gserviceaccount.com" -> https://console.cloud.google.com/iam-admin/serviceaccounts/project
+* credentials_file: path to the google cloud credentials file, e.g. "{{ playbook_dir }}/credentials.json" -> https://console.cloud.google.com/iam-admin/serviceaccounts/project create key, use json and download the file
 * zone: Zone where to start the instance, e.g. "us-central1-b"
 * openvpn_config_file_path: Path where to copy the openvpn config file for later use, e.g. "/Users/mjoeh/vpn/myopen.ovpn"
 
@@ -31,4 +31,10 @@ download from your google account and you need to set your gcloud profile id + s
 Just run ansible via the wrapper which will also install the needed python libs in an virtual environment.
 ```
 ./ansiblew localhost, site.yaml
+```
+
+Afterwards you can connect via openvpn
+
+```
+sudo openvpn --config myopen.ovpn
 ```
