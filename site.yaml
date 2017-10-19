@@ -15,6 +15,7 @@
       include_vars: "{{ item }}"
       tags: [mail]
       with_first_found:
+        - my_secrets.yaml
         - secrets.yaml
         - secrets_example.yaml
     - name: Precondition check
