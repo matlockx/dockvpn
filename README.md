@@ -13,7 +13,18 @@ ansible which
 
 ### Configuration
 
-You can configure some basics regarding the instance that will be started in gloud directly in the playbook [site.yaml]. You also need to provide a credentials_file.json in the root path of this project which you can
+You can configure some params directly in the playbook [site.yaml]:
+
+* project_id: Google cloud profile id
+* machine_type: Type of the instance (n1-standard-1)
+* image: Image id, e.g. centos-7
+* service_account_email: Google service account email, e.g. "74586816724-compute@developer.gserviceaccount.com"
+* credentials_file: path to the google cloud credentials file, e.g. "{{ playbook_dir }}/credentials.json"
+* zone: Zone where to start the instance, e.g. "us-central1-b"
+* openvpn_config_file_path: Path where to copy the openvpn config file for later use, e.g. "/Users/mjoeh/vpn/myopen.ovpn"
+
+#### Google credentials
+You also need to provide a credentials_file.json in the root path of this project which you can
 download from your google account and you need to set your gcloud profile id + service_account_email.
 
 ### Run
