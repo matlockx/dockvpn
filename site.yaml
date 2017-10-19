@@ -121,6 +121,9 @@
         docker run --name vpn-server -d --cap-add=NET_ADMIN
         -p 1194:1194/udp
         -p 443:443/tcp
+        --log-driver=gcplogs
+        --log-opt gcp-log-cmd=true
+        --restart unless-stopped
         matlockx/openvpn
 
     - name: Kill config
