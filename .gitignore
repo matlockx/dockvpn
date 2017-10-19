@@ -3,4 +3,3 @@ credentials.json
 myopen.ovpn
 *.retry
 vault_file
-secrets.yaml

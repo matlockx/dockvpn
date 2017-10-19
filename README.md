@@ -27,8 +27,7 @@ You can configure some params directly in the playbook [site.yaml](site.yaml):
 * mail_port: mail port
 
 #### Private
-There is some private data needed that should be located in a file called secrets.yaml
-You can copy the content of the secrets_example.yaml into an ansible vault file and check it into your own repo. Variables are:
+There is some private data needed that should be located in a file called secrets.yaml. Concurrently it is mine but you can copy the content of the secrets_example.yaml into a new secrets.yaml ansible vault file and push it into your own repo. Variables are:
 
 * project_id: Google cloud profile id -> https://console.cloud.google.com/iam-admin/settings/project
 * service_account_email: Google service account email -> https://console.cloud.google.com/iam-admin/serviceaccounts/project
