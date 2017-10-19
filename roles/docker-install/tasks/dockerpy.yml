@@ -1,0 +1,3 @@
+- name: Install docker-py package using pip
+  become: true
+  pip: name="docker-py=={{ docker_python_version }}" state="present"

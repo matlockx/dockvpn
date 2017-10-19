@@ -1,0 +1,16 @@
+---
+- name: Ensure repository
+  become: true
+  template:
+    src: '{{ docker_yum_repo_template_file }}'
+    dest: /etc/yum.repos.d/docker.repo
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Ensure package
+  become: true
+  package:
+    name: '{{ docker_package_name }}'
+    state: '{{ docker_package_state }}'
+    enablerepo: '{{ docker_packages_repo | default(omit) }}'

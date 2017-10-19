@@ -1,0 +1,154 @@
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    project_id: matlockx-162017
+    machine_type: n1-standard-1
+    image: centos-7
+    service_account_email: "74586816724-compute@developer.gserviceaccount.com"
+    credentials_file: "{{ playbook_dir }}/credentials.json"
+    zone: "us-central1-b"
+    openvpn_config_file_path: "/Users/mjoeh/vpn/myopen.ovpn"
+  tasks:
+    - name: Set credentials_file var globally
+      set_fact:
+        credentials_file: "{{ credentials_file }}"
+
+    - name: Set project id var globally
+      set_fact:
+        project_id: "{{ project_id }}"
+
+    - name: Set openvpn_config_file_path var globally
+      set_fact:
+        openvpn_config_file_path: "{{ openvpn_config_file_path }}"
+
+    - name: Set service_account_email var globally
+      set_fact:
+        service_account_email: "{{ service_account_email }}"
+    - name: Start machine
+      gce:
+         instance_names: openvpn
+         machine_type: "{{ machine_type }}"
+         image: "{{ image }}"
+         service_account_email: "{{ service_account_email }}"
+         credentials_file: "{{ credentials_file }}"
+         project_id: "{{ project_id }}"
+         zone: "{{ zone }}"
+         tags:
+           - openvpn
+      tags: vpn-server
+      register: gce
+
+    - name: Add host to group
+      add_host: hostname={{ item.public_ip }} groupname=new_instances
+      tags: vpn-server
+      with_items: "{{ gce.instance_data }}"
+
+    - name: Create firewall rule
+      gce_net:
+        fwname: "all-openvpn"
+        name: "default"
+        allowed: "tcp:443;tcp:8080;udp:1194"
+        state: "present"
+        service_account_email: "{{ service_account_email }}"
+        credentials_file: "{{ credentials_file }}"
+        project_id: "{{ project_id }}"
+        target_tags:
+          - openvpn
+
+    - name: Wait for SSH for instances
+      wait_for:
+        delay: 1
+        host: "{{ item.public_ip }}"
+        port: 22
+        state: started
+        timeout: 30
+      with_items: "{{ gce.instance_data }}"
+
+
+- name: Install and update needed packages
+  hosts: new_instances
+  tags: docker
+  pre_tasks:
+    - name: upgrade all packages
+      become: true
+      yum:
+        name: '*'
+        state: latest
+  roles:
+    - docker-install
+
+- name: Install vpn server
+  hosts: new_instances
+  gather_facts: false
+  tags: vpn-server
+  tasks:
+    - name: Pull container
+      become: true
+      command: docker pull matlockx/openvpn
+
+    - name: Kill server when running
+      ignore_errors: true
+      become: true
+      command: docker rm -fv vpn-server
+
+    - name: Run vpn server
+      become: true
+      command: |
+        docker run --name vpn-server -d --cap-add=NET_ADMIN
+        -p 1194:1194/udp
+        -p 443:443/tcp
+        matlockx/openvpn
+
+    - name: Kill config
+      ignore_errors: true
+      become: true
+      command: docker rm -fv serveconfig
+
+    - name: Serve config
+      become: true
+      command: |
+        docker run -d -p 8080:8080 --name serveconfig --volumes-from vpn-server
+        matlockx/openvpn serveconfig
+
+    - name: Wait for port 8080
+      wait_for:
+        delay: 1
+        host: "{{ inventory_hostname }}"
+        port: 8080
+        state: started
+        timeout: 30
+
+    - name: Get config
+      get_url:
+        url: "https://{{ inventory_hostname }}:8080"
+        dest: "{{ playbook_dir }}/myopen.ovpn"
+        validate_certs: false
+        force: true
+      delegate_to: localhost
+
+    - name: Kill config serving
+      become: true
+      command: docker rm -fv serveconfig
+
+
+- name: Remove the config listener port from firewall rule and copy config file
+  hosts: localhost
+  connection: local
+  tasks:
+    - name: Copy config file
+      copy:
+        src: "{{ playbook_dir}}/myopen.ovpn"
+        dest: "{{ openvpn_config_file_path }}"
+
+    - name: Update firewal rule
+      gce_net:
+        fwname: "all-openvpn"
+        name: "default"
+        allowed: "tcp:443;udp:1194"
+        state: "present"
+        service_account_email: "{{ service_account_email }}"
+        credentials_file: "{{ credentials_file }}"
+        project_id: "{{ project_id }}"
+        target_tags:
+          - openvpn

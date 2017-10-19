@@ -1,0 +1,8 @@
+
+- include: install.yml
+- include: config.yml
+- include: service.yml
+
+- include: dockerpy.yml
+  when: docker_python|bool
+  tags: docker-python

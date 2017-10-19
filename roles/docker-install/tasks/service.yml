@@ -1,0 +1,11 @@
+---
+- name: flush handlers
+  meta: flush_handlers
+
+- name: Ensure service
+  become: true
+  service:
+    name: '{{ item.name }}'
+    state: '{{ item.state | default(omit) }}'
+    enabled: '{{ item.enabled | default(omit) }}'
+  with_items: '{{ docker_services }}'

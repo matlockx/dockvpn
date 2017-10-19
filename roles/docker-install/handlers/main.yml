@@ -1,0 +1,26 @@
+---
+- name: Start Docker
+  become: true
+  service:
+    name: '{{ item.name }}'
+    state: started
+  with_items: '{{ docker_services }}'
+
+- name: Systemd daemon-reload
+  become: true
+  command: /bin/systemctl daemon-reload
+  when: ansible_distribution_major_version|int > 6
+
+- name: Restart Docker
+  become: true
+  service:
+    name: '{{ item.name }}'
+    state: restarted
+  with_items: '{{ docker_services }}'
+
+- name: Stop Docker
+  become: true
+  service:
+    name: '{{ item.name }}'
+    state: stopped
+  with_items: '{{ docker_services }}'

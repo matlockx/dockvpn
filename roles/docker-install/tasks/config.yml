@@ -1,0 +1,66 @@
+- name: Make directory for config file
+  become: true
+  file: name="{{ docker_config_file|dirname }}" state="directory"
+
+
+- name: Ensure socket file
+  become: true
+  template:
+    src: '{{ docker_socket_template_file }}'
+    dest: '{{ docker_socket_file }}'
+    owner: root
+    group: root
+    mode: '0644'
+  notify:
+    - Systemd daemon-reload
+    - Restart Docker
+
+- name: Ensure socket file is unmasked
+  become: true
+  file:
+    path: /etc/systemd/system/docker.socket
+    state: absent
+
+- name: Ensure configuration
+  become: true
+  template:
+    src: '{{ docker_dropin_template_file }}'
+    dest: '{{ docker_config_file }}'
+    owner: root
+    group: root
+    mode: '0644'
+  when: ansible_distribution in ['Fedora', 'CentOS', 'RedHat'] and ansible_distribution_major_version|int > 6
+  notify:
+    - Systemd daemon-reload
+    - Restart Docker
+
+- name: "Flush handlers now"
+  meta: flush_handlers
+
+- name: Ensure docker is running
+  become: true
+  service:
+    name: '{{ item.name }}'
+    state: started
+  with_items: '{{ docker_services }}'
+
+- name: Update facts
+  setup:
+
+- name: Creates directory
+  become: true
+  file:
+    path: '{{ docker_config_path }}'
+    state: directory
+    owner: root
+    group: root
+  when: ansible_distribution in ['Fedora', 'CentOS', 'RedHat'] and ansible_distribution_major_version|int > 6
+
+- name: Configure docker on CentOS 6
+  become: true
+  lineinfile:
+    dest: /etc/sysconfig/docker
+    line: 'other_args="{{ docker_options }}"'
+    regexp: 'other_args'
+  when: 'ansible_distribution in ["CentOS", "RedHat"] and  ansible_distribution_major_version|int == 6'
+  notify: Restart Docker
