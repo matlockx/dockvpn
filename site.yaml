@@ -2,13 +2,15 @@
   connection: local
   gather_facts: false
   vars:
-    instance_name: openvpn
+    zone: "europe-west3-a" #"us-central1-b"
+    instance_name: "openvpn-{{ zone }}"
     machine_type: n1-standard-1
     image: centos-7
-    zone: "us-central1-b"
     credentials_file: "{{ playbook_dir }}/credentials.json"
     mail_server: smtp.gmail.com
     mail_port: 465
+    config_file: "{{ openvpn_config_file_path }}/{{ zone }}-myopen.ovpn"
+    #config_file: "{{ openvpn_config_file_path }}/myopen.ovpn"
 
   pre_tasks:
     - name: Load vars from secrets file if it exists
@@ -46,13 +48,13 @@
           value: "{{ mail_address }}"
         - name: project_id
           value: "{{ project_id }}"
-        - name: openvpn_config_file_path
-          value: "{{ openvpn_config_file_path }}"
+        - name: config_file
+          value: "{{ config_file }}"
         - name: service_account_email
           value: "{{ service_account_email }}"
         - name: credentials_file
           value: "{{ credentials_file }}"
-    - include: gce.yaml state=terminated
+    - include: gce.yaml state=absent
       static: yes
       when: new_machine | default(false) | bool
     # unfortuntely state started does not return instance_data so we must run it with state present again
@@ -165,8 +167,8 @@
     - name: Copy config file
       copy:
         src: "{{ playbook_dir}}/myopen.ovpn"
-        dest: "{{ openvpn_config_file_path }}"
-      when: openvpn_config_file_path and not openvpn_config_file_path | trim == ""
+        dest: "{{ config_file }}"
+      when: config_file and not config_file | trim == ""
 
     - name: Sending email
       mail:
@@ -178,7 +180,7 @@
         from: "{{ mail_address }}"
         to: "{{ mail_address }}"
         subject: openvpn
-        attach: "{{ playbook_dir}}/myopen.ovpn"
+        attach: "{{ config_file }}"
       tags: mail
 
     - name: Update firewal rule
